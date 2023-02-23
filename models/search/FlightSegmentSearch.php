@@ -2,23 +2,67 @@
 
 namespace app\models\search;
 
+use app\models\AirportName;
+use app\models\Trip;
+use app\models\TripService;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use app\models\FlightSegment;
+use yii\db\ActiveQuery;
+use yii\db\Query;
 
 /**
  * FlightSegmentSearch represents the model behind the search form of `app\models\FlightSegment`.
  */
 class FlightSegmentSearch extends FlightSegment
 {
+    public $airName;
+
     /**
      * {@inheritdoc}
      */
     public function rules()
     {
         return [
-            [['id', 'flight_id', 'num', 'group', 'stopNumber', 'flightTime', 'eTicket', 'baggageValue', 'depAirportId', 'arrAirportId', 'opCompanyId', 'markCompanyId', 'aircraftId', 'depCityId', 'arrCityId', 'depTimestamp', 'arrTimestamp'], 'integer'],
-            [['departureTerminal', 'arrivalTerminal', 'flightNumber', 'departureDate', 'arrivalDate', 'bookingClass', 'bookingCode', 'baggageUnit', 'supplierRef'], 'safe'],
+            [
+                [
+                    'id',
+                    'flight_id',
+                    'num',
+                    'group',
+                    'stopNumber',
+                    'flightTime',
+                    'eTicket',
+                    'baggageValue',
+                    'depAirportId',
+                    'arrAirportId',
+                    'opCompanyId',
+                    'markCompanyId',
+                    'aircraftId',
+                    'depCityId',
+                    'arrCityId',
+                    'depTimestamp',
+                    'arrTimestamp',
+                    'serviceId',
+                    'corporateId',
+                ],
+                'integer',
+            ],
+            [
+                [
+                    'departureTerminal',
+                    'arrivalTerminal',
+                    'flightNumber',
+                    'departureDate',
+                    'arrivalDate',
+                    'bookingClass',
+                    'bookingCode',
+                    'baggageUnit',
+                    'supplierRef',
+                    'airName',
+                ],
+                'safe',
+            ],
         ];
     }
 
@@ -40,7 +84,22 @@ class FlightSegmentSearch extends FlightSegment
      */
     public function search($params)
     {
-        $query = FlightSegment::find();
+        $query = FlightSegment::find()
+            ->select([
+                self::tableName() . '.*',
+                TripService::tableName() . '.service_id serviceId',
+                Trip::tableName() . '.corporate_id corporateId',
+            ])
+            ->innerJoinWith([
+                'flight' => function (ActiveQuery $query) {
+                    return $query->andFilterWhere(['service_id' => $this->serviceId])
+                        ->innerJoinWith([
+                            'trip' => function ($query) {
+                                return $query->andFilterWhere(['corporate_id' => $this->corporateId]);
+                            },
+                        ]);
+                },
+            ]);
 
         // add conditions that should always apply here
 
@@ -48,12 +107,20 @@ class FlightSegmentSearch extends FlightSegment
             'query' => $query,
         ]);
 
-        $this->load($params);
+        $this->load($params, '');
 
         if (!$this->validate()) {
             // uncomment the following line if you do not want to return any records when validation fails
             // $query->where('0=1');
             return $dataProvider;
+        }
+
+        if ($this->airName) {
+            $airPortIds = (new Query())->from(AirportName::tableName())
+                ->select('airport_id')
+                ->andWhere(['like', 'airport_name.value', $this->airName])
+                ->column(AirportName::getDb());
+            $query->andWhere(['depAirportId' => $airPortIds]);
         }
 
         // grid filtering conditions
@@ -66,7 +133,6 @@ class FlightSegmentSearch extends FlightSegment
             'flightTime' => $this->flightTime,
             'eTicket' => $this->eTicket,
             'baggageValue' => $this->baggageValue,
-            'depAirportId' => $this->depAirportId,
             'arrAirportId' => $this->arrAirportId,
             'opCompanyId' => $this->opCompanyId,
             'markCompanyId' => $this->markCompanyId,

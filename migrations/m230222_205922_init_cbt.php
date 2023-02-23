@@ -125,6 +125,7 @@ class m230222_205922_init_cbt extends Migration
     {
         $this->dropForeignKey('fk_trip_service_trip_id','trip_service');
         $this->dropForeignKey('fk_flight_segment_flight_id','flight_segment');
+        $this->dropForeignKey('fk_flight_segment_depAirportId','flight_segment');
         $this->dropTable('trip');
         $this->dropTable('trip_service');
         $this->dropTable('flight_segment');

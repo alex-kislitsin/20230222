@@ -35,9 +35,13 @@ use Yii;
  * @property int|null $arrTimestamp
  *
  * @property TripService $flight
+ * @property AirportName $airportName
  */
 class FlightSegment extends \yii\db\ActiveRecord
 {
+    public $serviceId;
+    public $corporateId;
+
     /**
      * {@inheritdoc}
      */
@@ -107,5 +111,15 @@ class FlightSegment extends \yii\db\ActiveRecord
     public function getFlight()
     {
         return $this->hasOne(TripService::class, ['id' => 'flight_id']);
+    }
+
+    /**
+     * Gets query for [[Flight]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getAirportName()
+    {
+        return $this->hasOne(AirportName::class, ['airport_id' => 'depAirportId']);
     }
 }
